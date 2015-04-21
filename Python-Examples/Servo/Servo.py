@@ -43,17 +43,24 @@ setPeriod()             - Sets a new value for the period.
 """
 
 Revision History
+
+04-21-2015:
+    The original code doesn't work for me. Using a continuous servo, it goes one direction at a constant speed
+    no matter what value I write to it. So I made a few changes with inspiration from cylon.js
+    See https://github.com/hybridgroup/cylon-intel-iot/blob/master/lib/adaptor.js#L217-L222
+    
 ----------------------------------------------------------
     Author		   Date		  Description
 ----------------------------------------------------------
 Diego Villalobos	02-12-2015	Library created
-
+Xun Yang 			04-21-2015  Changed pulse generating functions
 """
 
 import mraa
 
 # Default constants
-DEFAULT_FREQ        = 50.0    # Default frequency in Hertz for PWM signal
+#DEFAULT_FREQ        = 50.0    # Default frequency in Hertz for PWM signal, original value
+DEFAULT_FREQ        = 125.0    # Default frequency in Hertz for PWM signal
 MIN_PULSE_WIDTH     = 550.0   # The shortest pulse
 MAX_PULSE_WIDTH     = 2500.0  # The longest pulse
 NEUTRAL_PULSE_WIDTH = 1500.0  # Neutral pulse sent
@@ -91,8 +98,9 @@ class Servo:
         self._pwm = None
         self._minWidth = minWidth
         self._maxWidth = maxWidth
-        self._frequency = frequency
-        self._period = round(1.0/frequency,4)
+        self.setFrequency(frequency)
+        #self._frequency = frequency
+        #self._period = round(1.0/frequency,4)
         self._uSecs = mapValue(90, 0, 180, self._minWidth, self._maxWidth)
 
     def __str__(self):
@@ -132,7 +140,8 @@ class Servo:
             self._pwm = mraa.Pwm(self._pinAttached)
             self._pwm.period = self._period
             self._pwm.enable(True)
-            self._pwm.write((self._uSecs/1000000.0)/self._period)
+            #self.write(90)
+            #self._pwm.write((self._uSecs/1000000.0)/self._period)
 
     def writeMicroseconds(self, uSecs):
         """
@@ -151,7 +160,9 @@ class Servo:
         self._uSecs = uSecs
 
         if self._pwm != None:
-            self._pwm.write((self._uSecs/1000000.0)/self._period)
+            #These two functions work, instead of self._pwm.write
+            self._pwm.period_us(self.getPeriod())
+            self._pwm.pulsewidth_us(int(self._uSecs))
 
     def write(self, angle):
         """
@@ -216,7 +227,7 @@ class Servo:
         Returns the current period.
         """
         
-        return self._period
+        return int(self._period)
 
     def setWidth(self, minWidth, maxWidth):
         """
@@ -240,7 +251,7 @@ class Servo:
 
         # Sets frequency and then period.
         self._frequency = frequency
-        self._period = round(1.0/frequency,4)
+        self._period = round(1000000.0/frequency,4)
 
     def setPeriod(self, period):
         """
@@ -252,4 +263,4 @@ class Servo:
 
         # Sets period and then frequency
         self._period = period
-        self._frequency = round(1/period,4)
+        self._frequency = round(1000000.0/period,4)
